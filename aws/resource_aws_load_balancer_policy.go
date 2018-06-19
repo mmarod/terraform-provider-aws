@@ -121,9 +121,6 @@ func resourceAwsLoadBalancerPolicyRead(d *schema.ResourceData, meta interface{})
 		pair := make(map[string]string)
 		pair["name"] = *a.AttributeName
 		pair["value"] = *a.AttributeValue
-		if (*policyTypeName == "SSLNegotiationPolicyType") && (*a.AttributeValue == "false") {
-			continue
-		}
 		attributes = append(attributes, pair)
 	}
 
