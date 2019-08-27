@@ -202,7 +202,7 @@ func resourceAwsAppCookieStickinessPolicyDelete(d *schema.ResourceData, meta int
 	// Retry for when listener is recreated and does not exist in time for the
 	// stickiness policy to be applied to it
 	var err error
-	err = resource.Retry(10*time.Second, func() *resource.RetryError {
+	err = resource.Retry(2*time.Minute, func() *resource.RetryError {
 		_, err = elbconn.SetLoadBalancerPoliciesOfListener(setLoadBalancerOpts)
 
 		if isAWSErr(err, "ListenerNotFound", "There is no configured listener for load balancer") {
