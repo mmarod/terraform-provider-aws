@@ -6,10 +6,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -197,7 +199,22 @@ func resourceAwsAppCookieStickinessPolicyDelete(d *schema.ResourceData, meta int
 		PolicyNames:      []*string{},
 	}
 
-	if _, err := elbconn.SetLoadBalancerPoliciesOfListener(setLoadBalancerOpts); err != nil {
+	// Retry for when listener is recreated and does not exist in time for the
+	// stickiness policy to be applied to it
+	var err error
+	err = resource.Retry(10*time.Second, func() *resource.RetryError {
+		_, err = elbconn.SetLoadBalancerPoliciesOfListener(setLoadBalancerOpts)
+
+		if isAWSErr(err, "ListenerNotFound", "There is no configured listener for load balancer") {
+			return resource.RetryableError(err)
+		}
+
+		return resource.NonRetryableError(err)
+	})
+	if isResourceTimeoutError(err) {
+		_, err = elbconn.SetLoadBalancerPoliciesOfListener(setLoadBalancerOpts)
+	}
+	if err != nil {
 		return fmt.Errorf("Error removing AppCookieStickinessPolicy: %s", err)
 	}
 
